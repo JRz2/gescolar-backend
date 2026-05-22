@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Sistema de Gestión Escolar - Gescolar PRO
+// Tecnologías: NestJS 10 + PostgreSQL + Prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -11,4 +8,283 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  ADMIN
+  DOCENTE
+  ESTUDIANTE
+}
+
+enum StudentGradeStatus {
+  ACTIVO
+  EGRESADO
+  SUSPENDIDO
+  DESERTOR
+}
+
+enum Shift {
+  MANANA
+  TARDE
+  NOCHE
+}
+
+enum Level {
+  PRIMARIO
+  SECUNDARIO
+  UNIVERSITARIO
+}
+
+enum ActionType {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  VIEW
+  EXPORT
+}
+
+// ============================================
+// MODELOS PRINCIPALES
+// ============================================
+
+// Usuario base para autenticación y datos personales
+model User {
+  id             Int       @id @default(autoincrement())
+  email          String    @unique
+  password       String    // Hasheado con bcrypt
+  firstName      String
+  lastName       String
+  ci             String    @unique  // Carnet de identidad
+  phone          String?
+  address        String?
+  role           UserRole
+  isActive       Boolean   @default(true)
+  isEmailVerified Boolean  @default(false)
+  lastLoginAt    DateTime?
+  deletedAt      DateTime? // Soft delete
+  
+  // Auditoría (quién lo creó/modificó)
+  createdBy      Int?
+  updatedBy      Int?
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relaciones
+  student        Student?
+  teacher        Teacher?
+  sessions       Session[]
+  auditLogs      AuditLog[]
+  loginAttempts  LoginAttempt[]
+  passwordResets PasswordReset[]
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// Estudiante
+model Student {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique
+  uniqueCode      String    @unique  // Registro único: 1001, 1002...
+  enrollmentNumber String   @unique  // Legajo
+  birthDate       DateTime?
+  guardianName    String?
+  guardianPhone   String?
+  admissionYear   Int
+
+  // Relaciones
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments     StudentGrade[]
+  scores          Score[]
+
+  @@map("students")
+}
+
+// Docente
+model Teacher {
+  id                Int       @id @default(autoincrement())
+  userId            Int       @unique
+  specialty         String?
+  degree            String?
+  hiringDate        DateTime? @default(now())
+
+  // Relaciones
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectAssignments SubjectAssignment[]
+
+  @@map("teachers")
+}
+
+// Grado / Año
+model Grade {
+  id          Int     @id @default(autoincrement())
+  name        String
+  level       Level
+  academicYear Int
+  shift       Shift
+  description String?
+
+  // Relaciones
+  subjectAssignments SubjectAssignment[]
+  enrollments        StudentGrade[]
+
+  @@unique([name, academicYear, shift])
+  @@map("grades")
+}
+
+// Materia
+model Subject {
+  id            Int     @id @default(autoincrement())
+  code          String  @unique
+  name          String
+  workload      Int?
+  year          Int
+  description   String?
+
+  // Relaciones
+  subjectAssignments SubjectAssignment[]
+
+  @@map("subjects")
+}
+
+// Asignación Materia-Grado-Docente
+model SubjectAssignment {
+  id           Int    @id @default(autoincrement())
+  gradeId      Int
+  subjectId    Int
+  teacherId    Int
+  academicYear Int
+
+  grade           Grade           @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  subject         Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher         Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  scores          Score[]
+
+  @@unique([gradeId, subjectId, academicYear])
+  @@map("subject_assignments")
+}
+
+// Inscripción Estudiante-Grado
+model StudentGrade {
+  id               Int               @id @default(autoincrement())
+  studentId        Int
+  gradeId          Int
+  academicYear     Int
+  status           StudentGradeStatus @default(ACTIVO)
+  enrollmentDate   DateTime          @default(now())
+
+  student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  grade            Grade             @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, academicYear])
+  @@map("student_grades")
+}
+
+// Calificación (Nota)
+model Score {
+  id                 Int       @id @default(autoincrement())
+  studentId          Int
+  subjectAssignmentId Int
+  trimester          Int       // 1, 2, 3 o 0 = final
+  value              Float     // Nota numérica (0-10 o 0-100)
+  observation        String?
+  registeredAt       DateTime  @default(now())
+
+  student            Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectAssignment  SubjectAssignment @relation(fields: [subjectAssignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectAssignmentId, trimester])
+  @@map("scores")
+}
+
+// ============================================
+// MODELOS DE SEGURIDAD Y AUDITORÍA (PRO)
+// ============================================
+
+// Intentos de login (seguridad)
+model LoginAttempt {
+  id            Int      @id @default(autoincrement())
+  email         String
+  userId        Int?
+  success       Boolean
+  ipAddress     String?
+  userAgent     String?
+  failureReason String?   // "wrong_password", "user_not_found", "account_locked"
+  createdAt     DateTime @default(now())
+
+  user          User?    @relation(fields: [userId], references: [id])
+
+  @@index([email])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([success])
+  @@map("login_attempts")
+}
+
+// Bitácora de auditoría (trazabilidad TOTAL)
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String   // "CREATE_STUDENT", "UPDATE_GRADE", "DELETE_USER"
+  entity    String   // "Student", "Teacher", "Grade"
+  entityId  String?  // ID del registro afectado
+  oldValue  Json?    // Valor anterior (antes del cambio)
+  newValue  Json?    // Valor nuevo (después del cambio)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Sesiones activas (Refresh tokens)
+model Session {
+  id           String   @id @default(cuid())
+  userId       Int
+  refreshToken String   @unique
+  expiresAt    DateTime
+  userAgent    String?
+  ipAddress    String?
+  isRevoked    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// Recuperación de contraseña
+model PasswordReset {
+  id         String   @id @default(cuid())
+  userId     Int
+  token      String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("password_resets")
 }
