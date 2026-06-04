@@ -9,6 +9,7 @@ import { TeachersModule } from './teachers/teachers.module';
 import { StudentsModule } from './students/students.module';
 import { GradesModule } from './grades/grades.module';
 import { SubjectsModule } from './subjects/subjects.module';
+import { SubjectAssignmentsModule } from './subject-assignments/subject-assignments.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SubjectsModule } from './subjects/subjects.module';
     StudentsModule,
     GradesModule,
     SubjectsModule,
+    SubjectAssignmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
