@@ -11,6 +11,8 @@ import { GradesModule } from './grades/grades.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { SubjectAssignmentsModule } from './subject-assignments/subject-assignments.module';
 import { StudentGradesModule } from './student-grades/student-grades.module';
+import { AcademicConfigModule } from './academic-config/academic-config.module';
+import { EvaluationTypesModule } from './evaluation-types/evaluation-types.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { StudentGradesModule } from './student-grades/student-grades.module';
     SubjectsModule,
     SubjectAssignmentsModule,
     StudentGradesModule,
+    AcademicConfigModule,
+    EvaluationTypesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

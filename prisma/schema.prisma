@@ -52,6 +52,128 @@ enum ActionType {
 }
 
 // ============================================
+// CONFIGURACIÓN ACADÉMICA
+// ============================================
+
+enum PeriodType {
+  BIMESTRE
+  TRIMESTRE
+  CUATRIMESTRE
+}
+
+model AcademicConfig {
+  id              Int        @id @default(autoincrement())
+  name            String
+  academicYear    Int        @unique
+  periodType      PeriodType
+  numberOfPeriods Int
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@map("academic_configs")
+}
+
+// ============================================
+// EVALUACIONES
+// ============================================
+
+model EvaluationType {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  description String?
+  icon        String?
+  color       String?
+  isActive    Boolean @default(true)
+
+  components  EvaluationComponent[]
+
+  @@map("evaluation_types")
+}
+
+model EvaluationComponent {
+  id                Int      @id @default(autoincrement())
+  subjectAssignmentId Int
+  evaluationTypeId   Int
+  name               String
+  description        String?
+  percentage         Float
+  period             Int
+  maxScore           Float    @default(100)
+  order              Int      @default(0)
+  isRequired         Boolean  @default(true)
+  isClosed           Boolean  @default(false)
+  closeDate          DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relaciones
+  subjectAssignment  SubjectAssignment @relation(fields: [subjectAssignmentId], references: [id], onDelete: Cascade)
+  evaluationType     EvaluationType    @relation(fields: [evaluationTypeId], references: [id])
+  scores             ComponentScore[]
+
+  @@unique([subjectAssignmentId, period, name])
+  @@index([subjectAssignmentId, period])
+  @@map("evaluation_components")
+}
+
+model ComponentScore {
+  id                 Int      @id @default(autoincrement())
+  studentId          Int
+  evaluationComponentId Int
+  score              Float
+  observations       String?
+  registeredBy       Int?
+  registeredAt       DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relaciones
+  student            Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  evaluationComponent EvaluationComponent @relation(fields: [evaluationComponentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, evaluationComponentId])
+  @@index([studentId])
+  @@index([evaluationComponentId])
+  @@map("component_scores")
+}
+
+model PeriodAverage {
+  id                 Int      @id @default(autoincrement())
+  studentId          Int
+  subjectAssignmentId Int
+  period             Int
+  average            Float
+  percentage         Float?
+  isClosed           Boolean  @default(false)
+  closedAt           DateTime?
+  closedBy           Int?
+  
+  // Relaciones
+  student            Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectAssignment  SubjectAssignment @relation(fields: [subjectAssignmentId], references: [id], onDelete: Cascade)
+  
+  @@unique([studentId, subjectAssignmentId, period])
+  @@index([subjectAssignmentId, period])
+  @@map("period_averages")
+}
+
+model PeriodClose {
+  id                 Int      @id @default(autoincrement())
+  subjectAssignmentId Int
+  period             Int
+  closedAt           DateTime @default(now())
+  closedBy           Int
+  
+  // Relaciones
+  subjectAssignment  SubjectAssignment @relation(fields: [subjectAssignmentId], references: [id], onDelete: Cascade)
+  
+  @@unique([subjectAssignmentId, period])
+  @@map("period_closes")
+}
+
+// ============================================
 // MODELOS PRINCIPALES
 // ============================================
 
@@ -108,6 +230,8 @@ model Student {
   user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   enrollments     StudentGrade[]
   scores          Score[]
+  componentScores ComponentScore[]
+  periodAverages  PeriodAverage[]
 
   @@map("students")
 }
@@ -172,6 +296,9 @@ model SubjectAssignment {
   teacher         Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   scores          Score[]
 
+  evaluationComponents EvaluationComponent[]
+  periodAverages       PeriodAverage[]
+  periodCloses         PeriodClose[]
   @@unique([gradeId, subjectId, academicYear])
   @@map("subject_assignments")
 }
