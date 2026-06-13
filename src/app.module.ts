@@ -13,6 +13,7 @@ import { SubjectAssignmentsModule } from './subject-assignments/subject-assignme
 import { StudentGradesModule } from './student-grades/student-grades.module';
 import { AcademicConfigModule } from './academic-config/academic-config.module';
 import { EvaluationTypesModule } from './evaluation-types/evaluation-types.module';
+import { ComponentScoresModule } from './component-scores/component-scores.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { EvaluationTypesModule } from './evaluation-types/evaluation-types.modul
     StudentGradesModule,
     AcademicConfigModule,
     EvaluationTypesModule,
+    ComponentScoresModule,
   ],
   controllers: [AppController],
   providers: [AppService],
