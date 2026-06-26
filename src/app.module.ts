@@ -14,6 +14,7 @@ import { StudentGradesModule } from './student-grades/student-grades.module';
 import { AcademicConfigModule } from './academic-config/academic-config.module';
 import { EvaluationTypesModule } from './evaluation-types/evaluation-types.module';
 import { ComponentScoresModule } from './component-scores/component-scores.module';
+import { PeriodAveragesModule } from './period-averages/period-averages.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ComponentScoresModule } from './component-scores/component-scores.modul
     AcademicConfigModule,
     EvaluationTypesModule,
     ComponentScoresModule,
+    PeriodAveragesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
