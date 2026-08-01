@@ -119,7 +119,7 @@ export class StudentsService {
     // Obtener estudiantes inscritos en ese grado y año
     const enrollments = await this.prisma.studentGrade.findMany({
       where: {
-        gradoId: gradeId,
+        gradeId: gradeId,
         academicYear,
         status: StudentGradeStatus.ACTIVO,
       },

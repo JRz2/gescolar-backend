@@ -156,6 +156,7 @@ export class PeriodClosesService {
         id: true,
         name: true,
         isClosed: true,
+        percentage: true,
         scores: {
           select: { id: true },
         },

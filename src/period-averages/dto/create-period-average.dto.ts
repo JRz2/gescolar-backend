@@ -1,4 +1,4 @@
-import { IsInt, IsFloat, IsOptional, Min, Max } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, Min, Max } from 'class-validator';
 
 export class CreatePeriodAverageDto {
     @IsInt()
@@ -12,12 +12,12 @@ export class CreatePeriodAverageDto {
     @Max(12)
     period: number;
 
-    @IsFloat()
+    @IsNumber()
     @Min(0)
     @Max(100)
     average: number;
 
-    @IsFloat()
+    @IsNumber()
     @IsOptional()
     @Min(0)
     @Max(100)
